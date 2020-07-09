@@ -1,0 +1,29 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+
+<ContentPage xmlns="http://xamarin.com/schemas/2014/forms"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="OpenSynScanWifi.Views.MainPage"
+             Title="{Binding Title}">
+
+	<StackLayout HorizontalOptions="CenterAndExpand" VerticalOptions="CenterAndExpand">
+		<CollectionView
+			x:Name="MountsCollectionView"
+			ItemsSource="{Binding MountDiscovery.DeviceIpEndPoints, Mode=OneWay}"
+			SelectionMode="Single"
+			SelectionChangedCommand="{Binding SelectionChangedCommand}"
+			SelectedItem="{Binding SelectedMount}">
+			<CollectionView.ItemTemplate>
+				<DataTemplate>
+					<Frame Margin="10">
+						<Label
+							Text="{Binding Address, Mode=OneWay}"
+							FontAttributes="Bold" />
+					</Frame>
+				</DataTemplate>
+			</CollectionView.ItemTemplate>
+		</CollectionView>
+		<Button Text="Find Mounts" Command="{Binding FindMountsAsync, Mode=OneWay}" />
+		<Button Text="Clear Clients" Command="{Binding RestartDiscoveryAsync, Mode=OneWay}" />
+	</StackLayout>
+
+</ContentPage>
