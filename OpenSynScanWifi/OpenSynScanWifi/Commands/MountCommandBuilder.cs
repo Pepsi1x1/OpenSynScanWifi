@@ -1,4 +1,5 @@
 ﻿using OpenSynScanWifi.Annotations;
+using OpenSynScanWifi.Constants;
 
 namespace OpenSynScanWifi.Commands
 {

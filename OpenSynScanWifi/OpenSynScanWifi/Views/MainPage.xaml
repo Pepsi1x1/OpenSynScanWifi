@@ -8,7 +8,7 @@
 	<StackLayout HorizontalOptions="CenterAndExpand" VerticalOptions="CenterAndExpand">
 		<CollectionView
 			x:Name="MountsCollectionView"
-			ItemsSource="{Binding MountDiscovery.DeviceIpEndPoints, Mode=OneWay}"
+			ItemsSource="{Binding MountDiscovery.ConnectedMounts, Mode=OneWay}"
 			SelectionMode="Single"
 			SelectionChangedCommand="{Binding SelectionChangedCommand}"
 			SelectedItem="{Binding SelectedMount}">
@@ -16,7 +16,7 @@
 				<DataTemplate>
 					<Frame Margin="10">
 						<Label
-							Text="{Binding Address, Mode=OneWay}"
+							Text="{Binding WifiMount.Address, Mode=OneWay}"
 							FontAttributes="Bold" />
 					</Frame>
 				</DataTemplate>

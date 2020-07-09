@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -9,26 +10,54 @@ using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using ImTools;
 using OpenSynScanWifi.Annotations;
+using OpenSynScanWifi.Commands;
 using OpenSynScanWifi.Constants;
+using OpenSynScanWifi.Helpers;
+using OpenSynScanWifi.Models;
 using Xamarin.Forms;
 
 namespace OpenSynScanWifi.Services
 {
 	public sealed class MountDiscovery : IMountDiscovery, INotifyPropertyChanged
 	{
-		public ObservableCollection<WifiMount> DeviceIpEndPoints { get; private set; } = new ObservableCollection<WifiMount>();
+		public ObservableCollection<IMountInfo> ConnectedMounts { get; private set; } = new ObservableCollection<IMountInfo>();
+
+		private List<string> _discoveredMounts = new List<string>();
 
 		[NotNull] private readonly UdpClient _udpClient;
 
-		public MountDiscovery([NotNull] UdpClient udpClient)
+		[NotNull] private readonly IMountInitialisationCommandBuilder _commandBuilder;
+
+		[NotNull] private readonly IMountInitialisationCommandParser _commandParser;
+
+		[NotNull] private readonly IMountCommonCommandBuilder _commonCommandBuilder;
+
+		[NotNull] private readonly IMountCommonCommandParser _commonCommandParser;
+
+		[NotNull] private readonly Random _rand = new Random(50101);
+
+		public MountDiscovery([NotNull] UdpClient udpClient, 
+			[NotNull] IMountInitialisationCommandBuilder commandBuilder, 
+			[NotNull] IMountInitialisationCommandParser commandParser,
+			[NotNull] IMountCommonCommandBuilder commonCommandBuilder, 
+			[NotNull] IMountCommonCommandParser commonCommandParser)
 		{
 			this._udpClient = udpClient;
+
+			this._commandBuilder = commandBuilder;
+
+			this._commandParser = commandParser;
+
+			this._commonCommandBuilder = commonCommandBuilder;
+
+			this._commonCommandParser = commonCommandParser;
 		}
 
 		public Task DiscoverAsync(CancellationToken cancellationToken)
 		{
-			DeviceIpEndPoints.Clear();
+			this.ConnectedMounts.Clear();
 
 			Task.Run(async () =>
 			{
@@ -36,13 +65,18 @@ namespace OpenSynScanWifi.Services
 				{
 					UdpReceiveResult receiveResult = await this._udpClient.ReceiveAsync().ConfigureAwait(false);
 
+					if (cancellationToken.IsCancellationRequested)
+					{
+						break;
+					}
+
 					IPEndPoint remoteEndPoint = receiveResult.RemoteEndPoint;
 
 					Debug.WriteLine(remoteEndPoint.Address);
 
 					var receivedMessage = BitConverter.ToString(receiveResult.Buffer);
 
-					var buffer = receiveResult.Buffer.ToList();
+					var buffer = receiveResult.Buffer;
 
 					Debug.WriteLine("GOT MESSAGE");
 
@@ -50,84 +84,23 @@ namespace OpenSynScanWifi.Services
 
 					if (buffer[0] == 13)
 					{
-						buffer.RemoveAt(0);
+						buffer = buffer.RemoveAt(0);
 					}
 
 					WifiMount wifiMount = WifiMount.ToWifiMount(remoteEndPoint);
 
-					if (this.DeviceIpEndPoints.FirstOrDefault(d => d.Address == wifiMount.Address) == null)
+					if (!this._discoveredMounts.Contains(wifiMount.Address))
 					{
-						Device.BeginInvokeOnMainThread(() => this.DeviceIpEndPoints.Add(wifiMount));
+						this._discoveredMounts.Add(wifiMount.Address);
 
-						Task.Run(async () => { await this.Handshake(wifiMount).ConfigureAwait(false); });
-					}
+						MountInfo mountOptions = new MountInfo() {WifiMount = wifiMount};
 
-					if (buffer.SequenceEqual(WifiConstants.SMSG_DISCOVERY_DATAGRAM))
-					{
-						//
+						Task.Run(async () => { await this.Handshake(mountOptions).ConfigureAwait(false); });
 					}
-					else if (buffer.SequenceEqual(WifiConstants.SMSG_DISCOVERY_DATAGRAM2))
-					{
-						//
-					}
-					else if (buffer.SequenceEqual(WifiConstants.SMSG_DISCOVERY_DATAGRAM3))
-					{
-						//
-					}
-					else if (buffer.SequenceEqual(WifiConstants.SMSG_DISCOVERY_DATAGRAM5))
-					{
-						//
-					}
-					else if (buffer.SequenceEqual(WifiConstants.SMSG_DISCOVERY_DATAGRAM4))
-					{
-						//
-					}
-					else if (buffer.SequenceEqual(WifiConstants.SMSG_UNK_A1))
-					{
-						//
-					}
-					else if (buffer.SequenceEqual(WifiConstants.SMSG_UNK_A2))
-					{
-						//
-					}
-					else if (buffer.SequenceEqual(WifiConstants.SMSG_UNK_B1))
-					{
-						//
-					}
-					else if (buffer.SequenceEqual(WifiConstants.SMSG_UNK_G1))
-					{
-						//
-					}
-					else if (buffer.SequenceEqual(WifiConstants.SMSG_UNK_G2))
-					{
-						//
-					}
-					else if (buffer.SequenceEqual(WifiConstants.SMSG_UNK_F1))
-					{
-						//
-					}
-					else if (buffer.SequenceEqual(WifiConstants.SMSG_UNK_F2))
-					{
-						//
-					}
-					else if (buffer.SequenceEqual(WifiConstants.SMSG_UNK_f1))
-					{
-						//
-					}
-					else if (buffer.SequenceEqual(WifiConstants.SMSG_UNK_f2))
-					{
-						//
-					}
-					else if (buffer.SequenceEqual(WifiConstants.SMSG_MOUNT_MODE_QUERY))
-					{
-						//
-					}
-					else
-					{
-						Debug.WriteLine("!!!NEW PACKET!!!");
-					}
-
+					
+#if DEBUG
 					Array.ForEach(buffer.ToArray(), b => Debug.Write($"{b}, "));
+#endif
 
 					Debug.WriteLine("");
 				}
@@ -145,57 +118,132 @@ namespace OpenSynScanWifi.Services
 			Debug.WriteLine("Sent DISCOVERY1");
 		}
 
-		public async Task Handshake(WifiMount mount)
+		public async Task Handshake(IMountInfo mountOptions)
 		{
-			await this.AckDiscovery2(mount);
+			await this.ResetRxBuffer(mountOptions, MountAxis.LeftRight).ConfigureAwait(false);
 
-			await Task.Delay(2000);
+			await this.ResetRxBuffer(mountOptions, MountAxis.UpDown).ConfigureAwait(false);
 
-			await this.AckDiscovery3(mount);
 
-			await Task.Delay(2000);
+			await this.GetMotorBoardVersion(mountOptions).ConfigureAwait(false);
 
-			await this.AckDiscovery4(mount);
 
-			await Task.Delay(2000);
+			await this.QueryCountsPerRevolution(mountOptions, MountAxis.LeftRight).ConfigureAwait(false);
 
-			this.AckDiscoveryEnd(mount);
+			await this.QueryCountsPerRevolution(mountOptions, MountAxis.UpDown).ConfigureAwait(false);
 
-			await Task.Delay(5000);
 
-			await this.AckDiscovery5(mount);
+			await this.QueryTimerInteruptFrequency(mountOptions, MountAxis.LeftRight).ConfigureAwait(false);
 
-			await Task.Delay(2000);
+			await this.QueryTimerInteruptFrequency(mountOptions, MountAxis.UpDown).ConfigureAwait(false);
 
-			await this.SendCommand(mount, WifiConstants.CMSG_UNK_A1);
-			Debug.WriteLine("Sent CMSG_UNK_A1");
 
-			await this.SendCommand(mount, WifiConstants.CMSG_UNK_A2);
-			Debug.WriteLine("Sent CMSG_UNK_A2");
+			await this.QueryHighSpeedRatio(mountOptions, MountAxis.LeftRight).ConfigureAwait(false);
 
-			await this.SendCommand(mount, WifiConstants.CMSG_UNK_B1);
-			Debug.WriteLine("Sent CMSG_UNK_B1");
+			await this.QueryHighSpeedRatio(mountOptions, MountAxis.UpDown).ConfigureAwait(false);
 
-			await this.SendCommand(mount, WifiConstants.CMSG_UNK_G1);
-			Debug.WriteLine("Sent CMSG_UNK_G1");
 
-			await this.SendCommand(mount, WifiConstants.CMSG_UNK_G2);
-			Debug.WriteLine("Sent CMSG_UNK_G2");
+			await this.QueryAxisPosition(mountOptions, MountAxis.LeftRight).ConfigureAwait(false);
 
-			await this.SendCommand(mount, WifiConstants.CMSG_UNK_F1);
-			Debug.WriteLine("Sent CMSG_UNK_F1");
+			await this.QueryAxisPosition(mountOptions, MountAxis.UpDown).ConfigureAwait(false);
 
-			await this.SendCommand(mount, WifiConstants.CMSG_UNK_F2);
-			Debug.WriteLine("Sent CMSG_UNK_F2");
 
-			await this.SendCommand(mount, WifiConstants.CMSG_UNK_f1);
-			Debug.WriteLine("Sent CMSG_UNK_f1");
+			await this.FinaliseInitialisation(mountOptions, MountAxis.LeftRight).ConfigureAwait(false);
 
-			await this.SendCommand(mount, WifiConstants.CMSG_UNK_f2);
-			Debug.WriteLine("Sent CMSG_UNK_f2");
+			await this.FinaliseInitialisation(mountOptions, MountAxis.UpDown).ConfigureAwait(false);
 
-			await this.SendCommand(mount, WifiConstants.CMSG_MOUNT_MODE_QUERY);
-			Debug.WriteLine("Sent CMSG_MOUNT_MODE_QUERY");
+
+			await this.QueryStatus(mountOptions, MountAxis.LeftRight).ConfigureAwait(false);
+
+			await this.QueryStatus(mountOptions, MountAxis.UpDown).ConfigureAwait(false);
+
+			// Default break steps
+			mountOptions.BreakSteps[(int) MountAxis.LeftRight] = 3500;
+
+			mountOptions.BreakSteps[(int) MountAxis.UpDown] = 3500;
+
+			Device.BeginInvokeOnMainThread(() => this.ConnectedMounts.Add(mountOptions));
+		}
+
+		private async Task QueryStatus(IMountInfo mountOptions, MountAxis axis)
+		{
+			byte[] command = this._commonCommandBuilder.BuildGetStatusCommand(axis);
+
+			byte[] response = await this.SendRecieveCommand(mountOptions.WifiMount, command).ConfigureAwait(false);
+
+			AxisStatus status = this._commonCommandParser.ParseStatusResponse(response);
+
+			mountOptions.AxesStatus[(int) axis] = status;
+		}
+
+		private async Task FinaliseInitialisation(IMountInfo mountOptions, MountAxis axis)
+		{
+			byte[] command = this._commandBuilder.BuildFinaliseInitialisationCommand(axis);
+
+			await this.SendCommand(mountOptions.WifiMount, command).ConfigureAwait(false);
+		}
+
+		private async Task QueryAxisPosition(IMountInfo mountOptions, MountAxis axis)
+		{
+			byte[] command = this._commonCommandBuilder.BuildGetAxisPositionCommand(axis);
+
+			byte[] response = await this.SendRecieveCommand(mountOptions.WifiMount, command).ConfigureAwait(false);
+
+			long steps = this._commonCommandParser.ParseAxisPositionResponse(response);
+
+			mountOptions.AxisPositions[(int) axis] = Conversion.StepToAngle(mountOptions.StepCoefficients[(int) axis].FactorStepToRad, steps);
+		}
+
+		private async Task QueryHighSpeedRatio(IMountInfo mountOptions, MountAxis axis)
+		{
+			byte[] command = this._commandBuilder.BuildGetHighSpeedRatioCommand(axis);
+
+			byte[] response = await this.SendRecieveCommand(mountOptions.WifiMount, command).ConfigureAwait(false);
+
+			long ratio = this._commandParser.ParseHighSpeedRatioResponse(response);
+
+			mountOptions.HighSpeedRatio[(int) axis] = ratio;
+		}
+
+		private async Task QueryTimerInteruptFrequency(IMountInfo mountOptions, MountAxis axis)
+		{
+			byte[] command = this._commandBuilder.BuildGetTimerInterruptFreqCommand(axis);
+
+			byte[] response = await this.SendRecieveCommand(mountOptions.WifiMount, command).ConfigureAwait(false);
+
+			long timerFreq = this._commandParser.ParseTimerInterruptFreqResponse(response);
+
+			mountOptions.TimerInterruptFrequencies[(int) axis] = timerFreq;
+
+			mountOptions.MotorInterval[(int) axis] = Conversion.CalculateMotorInterval(mountOptions.StepCoefficients[(int) axis].FactorRadToStep, timerFreq);
+		}
+
+		private async Task QueryCountsPerRevolution(IMountInfo mountOptions, MountAxis axis)
+		{
+			byte[] command = this._commandBuilder.BuildGetCountsPerRevolutionCommand(axis);
+
+			byte[] response = await this.SendRecieveCommand(mountOptions.WifiMount, command).ConfigureAwait(false);
+
+			long gearRatio = this._commandParser.ParseCountsPerRevolutionRepsonse(response, mountOptions.MountControllerVersion);
+
+			mountOptions.StepCoefficients[(int) axis] = new StepCoefficients(gearRatio);
+		}
+
+		private async Task GetMotorBoardVersion(IMountInfo mountOptions)
+		{
+			byte[] mcVersionCommand = this._commandBuilder.BuildGetMotorBoardVersionCommand(MountAxis.LeftRight);
+
+			byte[] mcVersionResponse = await this.SendRecieveCommand(mountOptions.WifiMount, mcVersionCommand).ConfigureAwait(false);
+
+			mountOptions.MountControllerVersion = this._commandParser.ParseMotorBoardResponse(mcVersionResponse);
+		}
+
+		[NotNull]
+		private Task ResetRxBuffer(IMountInfo mountOptions, MountAxis axis)
+		{
+			byte[] rxBuffer = this._commandBuilder.BuildResetRxBufferCommand(axis);
+
+			return this.SendCommand(mountOptions.WifiMount, rxBuffer);
 		}
 
 		public async Task SendCommand(WifiMount mount, byte[] command)
@@ -205,34 +253,37 @@ namespace OpenSynScanWifi.Services
 			await Task.Delay(2000);
 		}
 
-		public async Task AckDiscovery2(WifiMount mount)
+		public async Task<byte[]> SendRecieveCommand(WifiMount mount, byte[] command)
 		{
-			await this._udpClient.SendAsync(WifiConstants.CMSG_DISCOVERY_DATAGRAM2, WifiConstants.CMSG_DISCOVERY_DATAGRAM2.Length, new IPEndPoint(IPAddress.Parse(mount.Address), mount.Port)).ConfigureAwait(false);
-			Debug.WriteLine("Sent CMSG_DISCOVERY_DATAGRAM2");
-		}
+			int port = this._rand.Next(50101, 65535);
 
-		public async Task AckDiscovery3(WifiMount mount)
-		{
-			await this._udpClient.SendAsync(WifiConstants.CMSG_DISCOVERY_DATAGRAM3, WifiConstants.CMSG_DISCOVERY_DATAGRAM3.Length, new IPEndPoint(IPAddress.Parse(mount.Address), mount.Port)).ConfigureAwait(false);
-			Debug.WriteLine("Sent CMSG_DISCOVERY_DATAGRAM3");
-		}
+			Debug.WriteLine($"UDP on port {port}");
 
-		public async Task AckDiscovery4(WifiMount mount)
-		{
-			await this._udpClient.SendAsync(WifiConstants.CMSG_DISCOVERY_DATAGRAM4, WifiConstants.CMSG_DISCOVERY_DATAGRAM4.Length, new IPEndPoint(IPAddress.Parse(mount.Address), mount.Port)).ConfigureAwait(false);
-			Debug.WriteLine("Sent CMSG_DISCOVERY_DATAGRAM4");
-		}
+			using (var udpClient = new UdpClient(new IPEndPoint(IPAddress.Any, port)))
+			{
+				await udpClient.SendAsync(command, command.Length, new IPEndPoint(IPAddress.Parse(mount.Address), mount.Port)).ConfigureAwait(false);
 
-		public async Task AckDiscoveryEnd(WifiMount mount)
-		{
-			await this._udpClient.SendAsync(WifiConstants.CMSG_START_DATAGRAM, WifiConstants.CMSG_START_DATAGRAM.Length, new IPEndPoint(IPAddress.Parse(mount.Address), mount.Port)).ConfigureAwait(false);
-			Debug.WriteLine("Sent CMSG_START_DATAGRAM");
-		}
+				UdpReceiveResult receiveResult = await udpClient.ReceiveAsync().ConfigureAwait(false);
 
-		public async Task AckDiscovery5(WifiMount mount)
-		{
-			await this._udpClient.SendAsync(WifiConstants.CMSG_DISCOVERY_DATAGRAM5, WifiConstants.CMSG_START_DATAGRAM.Length, new IPEndPoint(IPAddress.Parse(mount.Address), mount.Port)).ConfigureAwait(false);
-			Debug.WriteLine("Sent CMSG_DISCOVERY_DATAGRAM5");
+				IPEndPoint remoteEndPoint = receiveResult.RemoteEndPoint;
+
+				Debug.WriteLine(remoteEndPoint.Address);
+
+				string receivedMessage = BitConverter.ToString(receiveResult.Buffer);
+
+				byte[] buffer = receiveResult.Buffer;
+
+				Debug.WriteLine("GOT MESSAGE");
+
+				Debug.WriteLine(receivedMessage);
+
+				if (buffer[0] == 13)
+				{
+					buffer = buffer.RemoveAt(0);
+				}
+
+				return buffer;
+			}
 		}
 
 		public event PropertyChangedEventHandler PropertyChanged;

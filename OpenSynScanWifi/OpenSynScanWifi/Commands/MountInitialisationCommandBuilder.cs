@@ -1,8 +1,25 @@
 ﻿using System.Text;
+using OpenSynScanWifi.Constants;
 
 namespace OpenSynScanWifi.Commands
 {
-	public sealed class MountInitialisationCommandBuilder : MountCommandBuilder
+	public sealed class MountControlCommandBuilder : MountCommandBuilder, IMountControlCommandBuilder
+	{
+		//public byte[] BuildSlewToCommand(MountAxis axis)
+		//{
+		//	string command = base.Build(axis, ClientCommandSet.COMMAND_GET_MOTOR_BOARD_VERSION);
+
+		//	byte[] rawCommand = Encoding.ASCII.GetBytes(command);
+
+		//	return rawCommand;
+		//}
+	}
+
+	public interface IMountControlCommandBuilder
+	{
+	}
+
+	public sealed class MountInitialisationCommandBuilder : MountCommandBuilder, IMountInitialisationCommandBuilder
 	{
 		public byte[] BuildResetRxBufferCommand(MountAxis axis)
 		{
@@ -22,7 +39,7 @@ namespace OpenSynScanWifi.Commands
 			return rawCommand;
 		}
 
-		public byte[] BuildGetGridPerRevolutionCommand(MountAxis axis)
+		public byte[] BuildGetCountsPerRevolutionCommand(MountAxis axis)
 		{
 			string command = base.Build(axis, ClientCommandSet.COMMAND_GET_GRID_PER_REVOLUTION);
 
@@ -43,7 +60,7 @@ namespace OpenSynScanWifi.Commands
 		/// <summary>
 		/// Inquire high speed ratio ":g(*2)", where *2: '1'= CH1, '2' = CH2.
 		/// </summary>
-		/// <param name="Axis"></param>
+		/// <param name="axis"></param>
 		public byte[] BuildGetHighSpeedRatioCommand(MountAxis axis)
 		{
 			string command = base.Build(axis, ClientCommandSet.COMMAND_GET_HIGH_SPEED_RATIO);
@@ -52,40 +69,14 @@ namespace OpenSynScanWifi.Commands
 
 			return rawCommand;
 		}
-
+		
 		/// <summary>
 		/// 
 		/// </summary>
-		/// <param name="Axis"></param>
-		public byte[] BuildGetAxisPositionCommand(MountAxis axis)
-		{
-			string command = base.Build(axis, ClientCommandSet.COMMAND_GET_AXIS_POSITION);
-
-			byte[] rawCommand = Encoding.ASCII.GetBytes(command);
-
-			return rawCommand;
-		}
-
-		/// <summary>
-		/// 
-		/// </summary>
-		/// <param name="Axis"></param>
+		/// <param name="axis"></param>
 		public byte[] BuildFinaliseInitialisationCommand(MountAxis axis)
 		{
 			string command = base.Build(axis, ClientCommandSet.COMMAND_FINALISE_INITIALISATION);
-
-			byte[] rawCommand = Encoding.ASCII.GetBytes(command);
-
-			return rawCommand;
-		}
-
-		/// <summary>
-		/// 
-		/// </summary>
-		/// <param name="Axis"></param>
-		public byte[] BuildGetStatusCommand(MountAxis axis)
-		{
-			string command = base.Build(axis, ClientCommandSet.COMMAND_GET_STATUS);
 
 			byte[] rawCommand = Encoding.ASCII.GetBytes(command);
 

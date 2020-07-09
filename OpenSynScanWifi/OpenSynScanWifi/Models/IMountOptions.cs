@@ -1,6 +1,4 @@
-﻿using OpenSynScanWifi.Services;
-
-namespace OpenSynScanWifi
+﻿namespace OpenSynScanWifi.Models
 {
 	public interface IMountOptions
 	{

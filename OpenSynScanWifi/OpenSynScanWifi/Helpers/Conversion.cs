@@ -12,7 +12,7 @@ namespace OpenSynScanWifi.Helpers
 		[NotNull]
 		public static byte[] HexToByteArray([NotNull] string hexString)
 		{
-			if (string.IsNullOrWhiteSpace(hexString))
+			if (String.IsNullOrWhiteSpace(hexString))
 			{
 				return new byte[1];
 			}
@@ -67,9 +67,32 @@ namespace OpenSynScanWifi.Helpers
 			return value;
 		}
 
-		public static double StepToAngle(double stepToRadCoefficent, long Steps)
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="stepToRadCoefficent"></param>
+		/// <param name="steps"></param>
+		/// <returns>Angle in radians</returns>
+		public static double StepToAngle(double stepToRadCoefficent, long steps)
 		{
-			return Steps * stepToRadCoefficent;
+			return steps * stepToRadCoefficent;
+		}
+
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="radToStepCoefficent"></param>
+		/// <param name="angle">Angle in radians</param>
+		/// <returns></returns>
+		public static  long AngleToStep(double radToStepCoefficent, double angle)
+		{
+			return (long)(angle * radToStepCoefficent);
+		}
+
+
+		public static double CalculateMotorInterval(double factorRadToStep, long timeFreq)
+		{
+			return (double) (timeFreq) / factorRadToStep;
 		}
 	}
 }

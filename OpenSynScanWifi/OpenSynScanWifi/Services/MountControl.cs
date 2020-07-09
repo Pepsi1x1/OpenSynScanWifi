@@ -6,6 +6,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using OpenSynScanWifi.Annotations;
+using OpenSynScanWifi.Models;
 
 namespace OpenSynScanWifi.Services
 {
@@ -13,10 +14,9 @@ namespace OpenSynScanWifi.Services
 	{
 		[NotNull] private readonly UdpClient _udpClient;
 
-		[NotNull] private readonly IMountOptions _mountOptions;
+		[NotNull] private IMountOptions _mountOptions;
 
-		public MountControl([NotNull] UdpClient udpClient,
-			[NotNull] IMountOptions mountOptions)
+		public MountControl([NotNull] UdpClient udpClient, [NotNull] IMountOptions mountOptions)
 		{
 			this._udpClient = udpClient;
 
@@ -30,6 +30,11 @@ namespace OpenSynScanWifi.Services
 				while (!cancellationToken.IsCancellationRequested)
 				{
 					UdpReceiveResult receiveResult = await this._udpClient.ReceiveAsync().ConfigureAwait(false);
+
+					if (cancellationToken.IsCancellationRequested)
+					{
+						break;
+					}
 
 					IPEndPoint remoteEndPoint = receiveResult.RemoteEndPoint;
 

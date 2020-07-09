@@ -2,6 +2,8 @@
 using System.Threading.Tasks;
 using AsyncAwaitBestPractices.MVVM;
 using OpenSynScanWifi.Annotations;
+using OpenSynScanWifi.Constants;
+using OpenSynScanWifi.Models;
 using OpenSynScanWifi.Services;
 using Prism.Navigation;
 
@@ -14,6 +16,8 @@ namespace OpenSynScanWifi.ViewModels
 		[NotNull] private readonly IMountControl _mountControl;
 
 		[NotNull] private CancellationTokenSource _mountControlCancellationTokenSource;
+
+		[NotNull] private IMountInfo _mountInfo;
 
 		public ControlPageViewModel(
 			[NotNull] INavigationService navigationService,
@@ -31,6 +35,10 @@ namespace OpenSynScanWifi.ViewModels
 		/// <param name="parameters">The navigation parameters.</param>
 		public override async void OnNavigatedTo(INavigationParameters parameters)
 		{
+			if (parameters.ContainsKey(NavigationConstants.MOUNT_INFO_NAV_PARAM))
+			{
+				this._mountInfo = (IMountInfo)parameters[NavigationConstants.MOUNT_INFO_NAV_PARAM];
+			}
 			this._mountControlCancellationTokenSource = new CancellationTokenSource();
 
 			await this._mountControl.ListenAsync(this._mountControlCancellationTokenSource.Token).ConfigureAwait(false);

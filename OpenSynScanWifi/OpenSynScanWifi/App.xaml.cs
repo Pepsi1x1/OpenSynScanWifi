@@ -2,6 +2,8 @@ using System;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
+using OpenSynScanWifi.Commands;
+using OpenSynScanWifi.Models;
 using OpenSynScanWifi.Services;
 using OpenSynScanWifi.ViewModels;
 using OpenSynScanWifi.Views;
@@ -53,11 +55,23 @@ namespace OpenSynScanWifi
 
 			Random rand = new Random(50000);
 
-			int port = rand.Next(50000, 65535);
+			int port = rand.Next(50000, 50100);
 
 			Debug.WriteLine($"UDP on port {port}");
 
 			containerRegistry.RegisterInstance(typeof(UdpClient), new UdpClient(new IPEndPoint(IPAddress.Any, port)));
+
+			containerRegistry.Register<IMountInitialisationCommandBuilder, MountInitialisationCommandBuilder>();
+
+			containerRegistry.Register<IMountCommonCommandBuilder, MountCommonCommandBuilder>();
+
+			containerRegistry.Register<IMountControlCommandBuilder, MountControlCommandBuilder>();
+
+			containerRegistry.Register<IMountInitialisationCommandParser, MountInitialisationCommandParser>();
+
+			containerRegistry.Register<IMountCommonCommandParser, MountCommonCommandParser>();
+
+			containerRegistry.Register<IMountControlCommandParser, MountControlCommandParser>();
 
 			containerRegistry.Register<IMountDiscovery, MountDiscovery>();
 

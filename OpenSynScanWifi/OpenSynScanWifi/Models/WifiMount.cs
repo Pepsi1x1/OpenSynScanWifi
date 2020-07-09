@@ -4,7 +4,7 @@ using System.Net;
 using System.Runtime.CompilerServices;
 using OpenSynScanWifi.Annotations;
 
-namespace OpenSynScanWifi.Services
+namespace OpenSynScanWifi.Models
 {
 	public class WifiMount : INotifyPropertyChanged
 	{

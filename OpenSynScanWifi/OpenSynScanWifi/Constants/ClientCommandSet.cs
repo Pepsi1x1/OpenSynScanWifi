@@ -1,4 +1,4 @@
-﻿namespace OpenSynScanWifi.Commands
+﻿namespace OpenSynScanWifi.Constants
 {
 	public static class ClientCommandSet
 	{

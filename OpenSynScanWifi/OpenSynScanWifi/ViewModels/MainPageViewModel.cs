@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using AsyncAwaitBestPractices.MVVM;
 using OpenSynScanWifi.Annotations;
 using OpenSynScanWifi.Constants;
+using OpenSynScanWifi.Models;
 using OpenSynScanWifi.Services;
 using Prism.Commands;
 using Prism.Navigation;
@@ -11,7 +12,7 @@ namespace OpenSynScanWifi.ViewModels
 {
 	public class MainPageViewModel : ViewModelBase
 	{
-		[CanBeNull] public WifiMount SelectedMount { get; set; }
+		[CanBeNull] public IMountInfo SelectedMount { get; set; }
 
 		[NotNull] public IAsyncCommand RestartDiscoveryAsync { get; }
 
@@ -69,11 +70,15 @@ namespace OpenSynScanWifi.ViewModels
 
 		private void OnSelectionChangedCommandExecuted()
 		{
-			this._mountOptions.WifiMount = SelectedMount;
+			this._mountOptions.WifiMount = SelectedMount?.WifiMount;
 
 			if (SelectedMount != null)
 			{
-				base.NavigationService.NavigateAsync(NavigationConstants.CONTROL_PAGE);
+				var navParams = new NavigationParameters();
+
+				navParams.Add(NavigationConstants.MOUNT_INFO_NAV_PARAM, SelectedMount);
+
+				base.NavigationService.NavigateAsync(NavigationConstants.CONTROL_PAGE, navParams);
 			}
 		}
 
@@ -84,7 +89,7 @@ namespace OpenSynScanWifi.ViewModels
 
 		private Task ExecuteRestartDiscoveryAsync()
 		{
-			this.MountDiscovery.DeviceIpEndPoints.Clear();
+			this.MountDiscovery.ConnectedMounts.Clear();
 
 			return Task.CompletedTask;
 		}
