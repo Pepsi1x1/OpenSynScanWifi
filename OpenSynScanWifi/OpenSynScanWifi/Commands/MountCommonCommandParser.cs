@@ -6,11 +6,13 @@ namespace OpenSynScanWifi.Commands
 {
 	public sealed class MountCommonCommandParser : MountCommandParserBase, IMountCommonCommandParser
 	{
-		public long ParseAxisPositionResponse([NotNull] byte[] response)
+		public double ParseAxisPositionResponse([NotNull] byte[] response)
 		{
-			this.ValidateResponse(response);
+			base.ValidateResponse(response);
 
-			long steps = response.BinaryCodedDecimalToLong();
+			response = base.StripGrammar(response);
+
+			double steps = response.BinaryCodedDecimalToDouble();
 
 			// Special Notes for data related to position:
 			// All the position data is offset by 0x800000.
@@ -25,6 +27,8 @@ namespace OpenSynScanWifi.Commands
 
 		public AxisStatus ParseStatusResponse(byte[] response)
 		{
+			response = base.StripGrammar(response);
+
 			var axisStatus = new AxisStatus();
 
 			if ((response[1] & (int) StatusMidBitFlags.Running) == 0)
@@ -98,6 +102,13 @@ namespace OpenSynScanWifi.Commands
 			}
 
 			return axisStatus;
+		}
+
+		public AxisStatusEx ParseExtendedStatusResponse([NotNull] byte[] response)
+		{
+			response = base.StripGrammar(response);
+
+			return new AxisStatusEx();
 		}
 	}
 }

@@ -9,6 +9,7 @@ namespace OpenSynScanWifi.Services
 	{
 		ObservableCollection<IMountInfo> ConnectedMounts { get; }
 
+		void ClearClients();
 		Task DiscoverAsync(CancellationToken cancellationToken);
 
 		Task FindAsync();

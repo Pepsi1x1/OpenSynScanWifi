@@ -14,6 +14,8 @@ namespace OpenSynScanWifi.ViewModels
 	{
 		[CanBeNull] public IMountInfo SelectedMount { get; set; }
 
+		[NotNull] private readonly IMountInfo _currentAppMountInfo;
+
 		[NotNull] public IAsyncCommand RestartDiscoveryAsync { get; }
 
 		[NotNull] public IAsyncCommand FindMountsAsync { get; }
@@ -29,7 +31,8 @@ namespace OpenSynScanWifi.ViewModels
 		public MainPageViewModel(
 			[NotNull] INavigationService navigationService,
 			[NotNull] IMountDiscovery mountDiscovery,
-			[NotNull] IMountOptions mountOptions)
+			[NotNull] IMountOptions mountOptions,
+			[NotNull] IMountInfo mountInfo)
 			: base(navigationService)
 		{
 			Title = "Main Page";
@@ -38,6 +41,8 @@ namespace OpenSynScanWifi.ViewModels
 			this.MountDiscovery = mountDiscovery;
 
 			this._mountOptions = mountOptions;
+
+			this._currentAppMountInfo = mountInfo;
 
 			FindMountsAsync = new AsyncCommand(ExecuteFindMountsAsync);
 
@@ -74,11 +79,11 @@ namespace OpenSynScanWifi.ViewModels
 
 			if (SelectedMount != null)
 			{
-				var navParams = new NavigationParameters();
+				this._currentAppMountInfo.WifiMount = SelectedMount.WifiMount;
 
-				navParams.Add(NavigationConstants.MOUNT_INFO_NAV_PARAM, SelectedMount);
+				this._currentAppMountInfo.MountState = SelectedMount.MountState;
 
-				base.NavigationService.NavigateAsync(NavigationConstants.CONTROL_PAGE, navParams);
+				base.NavigationService.NavigateAsync(NavigationConstants.CONTROL_PAGE);
 			}
 		}
 
@@ -89,7 +94,7 @@ namespace OpenSynScanWifi.ViewModels
 
 		private Task ExecuteRestartDiscoveryAsync()
 		{
-			this.MountDiscovery.ConnectedMounts.Clear();
+			this.MountDiscovery.ClearClients();
 
 			return Task.CompletedTask;
 		}

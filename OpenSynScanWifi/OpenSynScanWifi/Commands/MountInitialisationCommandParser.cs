@@ -3,22 +3,15 @@ using OpenSynScanWifi.Helpers;
 
 namespace OpenSynScanWifi.Commands
 {
-	public sealed class MountControlCommandParser : MountCommandParserBase, IMountControlCommandParser
-	{
-
-	}
-
-	public interface IMountControlCommandParser
-	{
-	}
-
 	public sealed class MountInitialisationCommandParser : MountCommandParserBase, IMountInitialisationCommandParser
 	{
 		public long ParseMotorBoardResponse([CanBeNull] byte[] response)
 		{
 			base.ValidateResponse(response);
 
-			long tmpMCVersion = response.BinaryCodedDecimalToLong();
+			response = base.StripGrammar(response);
+
+			long tmpMCVersion = (long) response.BinaryCodedDecimalToDouble();
 
 			return ((tmpMCVersion & 0xFF) << 16) | (tmpMCVersion & 0xFF00) | ((tmpMCVersion & 0xFF0000) >> 16);
 		}
@@ -29,11 +22,13 @@ namespace OpenSynScanWifi.Commands
 		/// <param name="response"></param>
 		/// <param name="mcVersion">Version number from motor board</param>
 		/// <returns>FactorRadToStep coefficient, FactorStepToRad coefficient</returns>
-		public long ParseCountsPerRevolutionRepsonse([NotNull] byte[] response, long mcVersion)
+		public double ParseCountsPerRevolutionRepsonse([NotNull] byte[] response, long mcVersion)
 		{
 			base.ValidateResponse(response);
 
-			long gearRatio;
+			response = base.StripGrammar(response);
+
+			double gearRatio;
 
 			// There is a bug in the earlier firmware versions < 2.00 of motor controller MC001.
 			// Overwrite the GearRatio reported by the MC for 80GT mount and 114GT mount.
@@ -51,7 +46,7 @@ namespace OpenSynScanWifi.Commands
 			}
 			else
 			{
-				gearRatio = response.BinaryCodedDecimalToLong();
+				gearRatio = response.BinaryCodedDecimalToDouble();
 			}
 
 			return gearRatio;
@@ -63,20 +58,24 @@ namespace OpenSynScanWifi.Commands
 		/// <param name="response"></param>
 		/// <param name="factorRadToStep"></param>
 		/// <returns>stepTimerFreq</returns>
-		public long ParseTimerInterruptFreqResponse([NotNull] byte[] response)
+		public double ParseTimerInterruptFreqResponse([NotNull] byte[] response)
 		{
 			base.ValidateResponse(response);
 
-			long timeFreq = response.BinaryCodedDecimalToLong();
+			response = base.StripGrammar(response);
+
+			double timeFreq = response.BinaryCodedDecimalToDouble();
 
 			return timeFreq;
 		}
 
-		public long ParseHighSpeedRatioResponse([NotNull] byte[] response)
+		public double ParseHighSpeedRatioResponse([NotNull] byte[] response)
 		{
 			base.ValidateResponse(response);
 
-			long highSpeedRatio = response.BinaryCodedDecimalToLong();
+			response = base.StripGrammar(response);
+
+			double highSpeedRatio = response.BinaryCodedDecimalToDouble();
 
 			return highSpeedRatio;
 		}

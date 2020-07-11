@@ -75,6 +75,10 @@ namespace OpenSynScanWifi
 
 			containerRegistry.Register<IMountDiscovery, MountDiscovery>();
 
+			containerRegistry.RegisterSingleton<IMountInfo, MountInfo>();
+
+			containerRegistry.Register<IMountMotion, MountMotion>();
+
 			containerRegistry.RegisterInstance<IMountOptions>(new MountOptions());
 
 			containerRegistry.Register<IMountControl, MountControl>();

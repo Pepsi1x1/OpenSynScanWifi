@@ -7,5 +7,7 @@ namespace OpenSynScanWifi.Commands
 		byte[] BuildGetAxisPositionCommand(MountAxis axis);
 
 		byte[] BuildGetStatusCommand(MountAxis axis);
+
+		byte[] BuildGetStatusExCommand(MountAxis axis, string parameters);
 	}
 }

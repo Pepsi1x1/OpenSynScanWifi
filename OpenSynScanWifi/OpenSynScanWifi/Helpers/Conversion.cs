@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Numerics;
+using System.Text;
 using OpenSynScanWifi.Annotations;
 
 namespace OpenSynScanWifi.Helpers
@@ -20,23 +21,19 @@ namespace OpenSynScanWifi.Helpers
 			return BigInteger.Parse(hexString, NumberStyles.HexNumber).ToByteArray().Reverse().ToArray();
 		}
 
-		/// <summary>
-		/// i.e. 020782 => 8521474
-		/// </summary>
-		/// <param name="str">A Binary coded decimal - hexadecimal string representation</param>
-		/// <returns>The decoded long</returns>
-		public static long BinaryCodedDecimalToLong(this string str)
+		public static double RevolutionsToDegrees(long revolutions)
 		{
-			try
-			{
-				byte[] bi = Conversion.HexToByteArray(str);
+			return revolutions * 360;
+		}
 
-				return bi.BinaryCodedDecimalToLong();
-			}
-			catch (FormatException)
-			{
-				throw new InvalidOperationException("Parsing BCD Failed");
-			}
+		public static double RevolutionsToDegrees(double revolutions)
+		{
+			return revolutions * 360;
+		}
+
+		public static double DegreesToRevolutions(double degrees)
+		{
+			return degrees / 360 * Math.Pow(2, 24);
 		}
 
 		/// <summary>
@@ -44,55 +41,74 @@ namespace OpenSynScanWifi.Helpers
 		/// </summary>
 		/// <param name="bi">A Binary coded decimal - byte array representation</param>
 		/// <returns>The decoded long</returns>
-		public static long BinaryCodedDecimalToLong(this byte[] bi)
+		public static double BinaryCodedDecimalToDouble(this byte[] bi)
 		{
-			long value = 0;
-			for (int i = 0; i < bi.Length; i++)
+			var hexStr = Encoding.ASCII.GetString(bi);
+
+			Debug.WriteLine(hexStr);
+
+			double retVal = 0;
+
+			for (int i = 0; i + 1 < hexStr.Length; i += 2)
 			{
-				long nibble = bi[i];
+				string complementHex = hexStr.Substring(i, 2);
 
-				Debug.WriteLine("n" + nibble);
+				int complement = int.Parse(complementHex, System.Globalization.NumberStyles.AllowHexSpecifier);
 
-				double pow = Math.Pow(16, i * 2);
+				Debug.WriteLine("c" + complement);
+
+				double pow = Math.Pow(16, i);
 
 				Debug.WriteLine("^" + pow);
 
-				long part = (long) (nibble * pow);
+				double part = complement * pow;
 
 				Debug.WriteLine("p" + part);
 
-				value += part;
+				retVal += part;
 			}
 
-			return value;
+			Console.WriteLine(retVal);
+
+			return retVal;
+		}
+
+		public static string ToBinaryCodedDecimal(this double value)
+		{
+			int a = (int) value & 0xFF;
+
+			int b = (int) ((long) value & 0xFF00) / 256;
+
+			int c = (int) ((long) value & 0xFF0000) / 65536;
+
+			return a.ToString("X2") + b.ToString("X2") + c.ToString("X2");
 		}
 
 		/// <summary>
 		/// 
 		/// </summary>
-		/// <param name="stepToRadCoefficent"></param>
+		/// <param name="stepToRadCoefficient"></param>
 		/// <param name="steps"></param>
 		/// <returns>Angle in radians</returns>
-		public static double StepToAngle(double stepToRadCoefficent, long steps)
+		public static double StepToAngle(double stepToRadCoefficient, double steps)
 		{
-			return steps * stepToRadCoefficent;
+			return steps * stepToRadCoefficient;
 		}
 
 		/// <summary>
 		/// 
 		/// </summary>
-		/// <param name="radToStepCoefficent"></param>
+		/// <param name="radToStepCoefficient"></param>
 		/// <param name="angle">Angle in radians</param>
 		/// <returns></returns>
-		public static  long AngleToStep(double radToStepCoefficent, double angle)
+		public static long AngleToStep(double radToStepCoefficient, double angle)
 		{
-			return (long)(angle * radToStepCoefficent);
+			return (long) (angle * radToStepCoefficient);
 		}
 
-
-		public static double CalculateMotorInterval(double factorRadToStep, long timeFreq)
+		public static double CalculateMotorInterval(double factorRadToStep, double timerFrequency)
 		{
-			return (double) (timeFreq) / factorRadToStep;
+			return timerFrequency / factorRadToStep;
 		}
 	}
 }

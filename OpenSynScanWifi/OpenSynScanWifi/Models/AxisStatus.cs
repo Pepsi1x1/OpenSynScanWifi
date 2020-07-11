@@ -18,4 +18,8 @@
 
 		public bool Blocked { get; set; }
 	}
+
+	public sealed class AxisStatusEx
+	{
+	}
 }

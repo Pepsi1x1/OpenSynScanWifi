@@ -14,6 +14,6 @@ namespace OpenSynScanWifi.Commands
 
 		byte[] BuildGetTimerInterruptFreqCommand(MountAxis axis);
 
-		byte[] BuildResetRxBufferCommand(MountAxis axis);
+		byte[] BuildResetRxBufferCommand();
 	}
 }

@@ -7,6 +7,8 @@ namespace OpenSynScanWifi.Commands
 	{
 		AxisStatus ParseStatusResponse([NotNull] byte[] response);
 
-		long ParseAxisPositionResponse([NotNull] byte[] response);
+		AxisStatusEx ParseExtendedStatusResponse([NotNull] byte[] response);
+
+		double ParseAxisPositionResponse([NotNull] byte[] response);
 	}
 }

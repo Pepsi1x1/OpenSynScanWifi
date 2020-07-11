@@ -30,5 +30,18 @@ namespace OpenSynScanWifi.Commands
 
 			return rawCommand;
 		}
+
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="axis"></param>
+		public byte[] BuildGetStatusExCommand(MountAxis axis, string parameters)
+		{
+			string command = base.Build(axis, ClientCommandSet.COMMAND_GET_STATUS_EX);
+
+			byte[] rawCommand = Encoding.ASCII.GetBytes(command);
+
+			return rawCommand;
+		}
 	}
 }

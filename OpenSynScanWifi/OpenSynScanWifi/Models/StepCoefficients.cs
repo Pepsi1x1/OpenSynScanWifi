@@ -1,25 +1,24 @@
 ﻿using System;
+using OpenSynScanWifi.Constants;
 
 namespace OpenSynScanWifi.Models
 {
 	public struct StepCoefficients
 	{
-		public const double SIDEREAL_RATE = 2 * Math.PI / 86164.09065;
-
 		public double FactorRadToStep;
 
 		public double FactorStepToRad;
 
-		public long LowSpeedGotoMargin;
+		public double LowSpeedGotoMargin;
 
-		public StepCoefficients(long gearRatio)
+		public StepCoefficients(double gearRatio)
 		{
 			this.FactorRadToStep = gearRatio / (2 * Math.PI);
 
 			this.FactorStepToRad = 2 * Math.PI / gearRatio;
 
 			// LowSpeedGotoMargin is calculated from slewing for 5 seconds in 128x sidereal rate
-			this.LowSpeedGotoMargin = (long) (640 * SIDEREAL_RATE * this.FactorRadToStep);
+			this.LowSpeedGotoMargin = 640 * MountControlConstants.SIDEREAL_RATE * this.FactorRadToStep;
 		}
 
 		public StepCoefficients(double factorRadToStep, double factorStepToRad)
@@ -28,7 +27,7 @@ namespace OpenSynScanWifi.Models
 
 			this.FactorStepToRad = factorStepToRad;
 
-			this.LowSpeedGotoMargin = (long) (640 * SIDEREAL_RATE * this.FactorRadToStep);
+			this.LowSpeedGotoMargin = 640 * MountControlConstants.SIDEREAL_RATE * this.FactorRadToStep;
 		}
 
 		public override bool Equals(object obj)

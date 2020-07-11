@@ -8,7 +8,24 @@
              x:Class="OpenSynScanWifi.Views.ControlPage">
 	<ContentPage.Content>
 		<StackLayout>
-			<Button Text="Echo" Command="{Binding EchoCommand, Mode=OneWay}" />
+			<Grid>
+				<Grid.RowDefinitions>
+					<RowDefinition Height="*" />
+					<RowDefinition Height="*" />
+					<RowDefinition Height="*" />
+				</Grid.RowDefinitions>
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="*" />
+					<ColumnDefinition Width="*" />
+					<ColumnDefinition Width="*" />
+				</Grid.ColumnDefinitions>
+				<Button Grid.Row="0" Grid.Column="1" Text="Up" Pressed="OnUpButtonPressed" Released="OnUpButtonReleased" />
+				<Button Grid.Row="1" Grid.Column="0" Text="Left" Pressed="OnLeftButtonPressed" Released="OnLeftButtonReleased" />
+				<Button Grid.Row="1" Grid.Column="1" Text="Stop" Pressed="OnStopButtonPressed" />
+				<Button Grid.Row="1" Grid.Column="2" Text="Right" Pressed="OnRightButtonPressed" Released="OnRightButtonReleased" />
+				<Button Grid.Row="2" Grid.Column="1" Text="Down" Pressed="OnDownButtonPressed" Released="OnDownButtonReleased" />
+			</Grid>
+			
 		</StackLayout>
 	</ContentPage.Content>
 </ContentPage>

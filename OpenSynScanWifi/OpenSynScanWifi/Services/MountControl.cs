@@ -1,81 +1,140 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Diagnostics.Contracts;
-using System.Net;
 using System.Net.Sockets;
-using System.Threading;
 using System.Threading.Tasks;
 using OpenSynScanWifi.Annotations;
+using OpenSynScanWifi.Commands;
+using OpenSynScanWifi.Constants;
+using OpenSynScanWifi.Helpers;
 using OpenSynScanWifi.Models;
 
 namespace OpenSynScanWifi.Services
 {
-	public class MountControl : IMountControl
+	public class MountControl : MountControllerBase, IMountControl
 	{
-		[NotNull] private readonly UdpClient _udpClient;
+		[NotNull] private IMountInfo _mountInfo;
 
-		[NotNull] private IMountOptions _mountOptions;
+		[NotNull] private readonly IMountControlCommandBuilder _commandBuilder;
 
-		public MountControl([NotNull] UdpClient udpClient, [NotNull] IMountOptions mountOptions)
+		[NotNull] private readonly IMountControlCommandParser _commandParser;
+
+		public MountControl([NotNull] UdpClient udpClient,
+			[NotNull] IMountControlCommandBuilder commandBuilder,
+			[NotNull] IMountControlCommandParser commandParser,
+			[NotNull] IMountCommonCommandBuilder commonCommandBuilder,
+			[NotNull] IMountCommonCommandParser commonCommandParser,
+			[NotNull] IMountInfo mountInfo) : base(udpClient, commonCommandBuilder, commonCommandParser)
 		{
-			this._udpClient = udpClient;
+			this._commandBuilder = commandBuilder;
 
-			this._mountOptions = mountOptions;
+			this._commandParser = commandParser;
+
+			this._mountInfo = mountInfo;
 		}
 
-		public Task ListenAsync(CancellationToken cancellationToken)
+		public void SetMountInfo([NotNull] IMountInfo mountInfo)
 		{
-			Task.Run(async () =>
+			if (mountInfo is null)
 			{
-				while (!cancellationToken.IsCancellationRequested)
-				{
-					UdpReceiveResult receiveResult = await this._udpClient.ReceiveAsync().ConfigureAwait(false);
-
-					if (cancellationToken.IsCancellationRequested)
-					{
-						break;
-					}
-
-					IPEndPoint remoteEndPoint = receiveResult.RemoteEndPoint;
-
-					Debug.WriteLine(remoteEndPoint.Address);
-
-					var receivedMessage = BitConverter.ToString(receiveResult.Buffer);
-
-					Debug.WriteLine(receivedMessage);
-				}
-			}, cancellationToken);
-
-			return Task.CompletedTask;
-		}
-
-		public Task EchoAsync()
-		{
-			// hello world
-			var command = new byte[] {0x3a, 75, 104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100};
-
-			return this.SendCommandAsync(command);
-		}
-
-		public async Task SendCommandAsync([NotNull] byte[] command)
-		{
-			this.ValidateSendCommand(command);
-
-			Contract.Requires(command.Length > 0);
-
-			Debug.WriteLine($"Sending UDP datagram {BitConverter.ToString(command)} to {this._mountOptions.WifiMount.Address}:{this._mountOptions.WifiMount.Port} ");
-
-			var res = await this._udpClient.SendAsync(command, command.Length, new IPEndPoint(IPAddress.Parse(this._mountOptions.WifiMount.Address), this._mountOptions.WifiMount.Port)).ConfigureAwait(false);
-
-			Debug.WriteLine(res);
-		}
-
-		private void ValidateSendCommand(byte[] command)
-		{
-			if (command is null)
-			{
-				throw new System.ArgumentNullException(nameof(command));
+				throw new ArgumentNullException(nameof(mountInfo), "Value cannot be null");
 			}
+
+			this._mountInfo = mountInfo;
+		}
+
+		public async Task QueryStatus(MountAxis axis)
+		{
+			byte[] command = this._commonCommandBuilder.BuildGetStatusCommand(axis);
+
+			byte[] response = await this.SendRecieveCommand(this._mountInfo.WifiMount, command).ConfigureAwait(false);
+
+			if (!base.ValidateResponse(response))
+			{
+				return;
+			}
+
+			if (response.Length != 5)
+			{
+				Debug.WriteLine($"Got malformed response to status query {response.Length} bytes");
+
+				this._mountInfo.MountState.AxesStatus[(int) axis] ??= new AxisStatus();
+
+				return;
+			}
+
+			AxisStatus status = this._commonCommandParser.ParseStatusResponse(response);
+
+			this._mountInfo.MountState.AxesStatus[(int) axis] = status;
+		}
+
+		public async Task SetAxisStop(MountAxis axis)
+		{
+			byte[] command = this._commandBuilder.BuildSetAxisStopCommand(axis);
+
+			await this.SendCommand(this._mountInfo.WifiMount, command).ConfigureAwait(false);
+
+			this._mountInfo.MountState.AxesStatus[(int) axis].FullStop = true;
+		}
+
+		public async Task SetAxisInstantStop(MountAxis axis)
+		{
+			byte[] command = this._commandBuilder.BuildSetAxisInstantStopCommand(axis);
+
+			await this.SendCommand(this._mountInfo.WifiMount, command).ConfigureAwait(false);
+
+			this._mountInfo.MountState.AxesStatus[(int) axis].FullStop = true;
+		}
+
+		public Task SetMotionMode(MountAxis axis, MotionModeLoBitFlags func, MotionModeHiBitFlags direction)
+		{
+			string szCmd = "" + (int) func + (int) direction;
+
+			byte[] command = this._commandBuilder.BuildSetMotionModeCommand(axis, szCmd);
+
+			return this.SendCommand(this._mountInfo.WifiMount, command);
+		}
+
+		public Task SetStepPeriod(MountAxis axis, double stepsCount)
+		{
+			string szCmd = stepsCount.ToBinaryCodedDecimal();
+
+			byte[] command = this._commandBuilder.BuildSetStepPeriodCommand(axis, szCmd);
+
+			return this.SendCommand(this._mountInfo.WifiMount, command);
+		}
+
+		public Task StartMotion(MountAxis axis)
+		{
+			byte[] command = this._commandBuilder.BuildSetStartMotionCommand(axis);
+
+			return this.SendCommand(this._mountInfo.WifiMount, command);
+		}
+
+		public Task SetGotoTargetIncrement(MountAxis axis, double stepsCount)
+		{
+			string szCmd = stepsCount.ToBinaryCodedDecimal();
+
+			byte[] command = this._commandBuilder.BuildSetGotoTargetIncrementCommand(axis, szCmd);
+
+			return this.SendCommand(this._mountInfo.WifiMount, command);
+		}
+
+		public Task SetBreakPointIncrement(MountAxis axis, double stepsCount)
+		{
+			string szCmd = stepsCount.ToBinaryCodedDecimal();
+
+			byte[] command = this._commandBuilder.BuildSetBreakPointIncrementCommand(axis, szCmd);
+
+			return this.SendCommand(this._mountInfo.WifiMount, command);
+		}
+
+		public Task SetBreakSteps(MountAxis axis, double breakSteps)
+		{
+			string szCmd = breakSteps.ToBinaryCodedDecimal();
+
+			byte[] command = this._commandBuilder.BuildSetBreakStepsCommand(axis, szCmd);
+
+			return this.SendCommand(this._mountInfo.WifiMount, command);
 		}
 	}
 }

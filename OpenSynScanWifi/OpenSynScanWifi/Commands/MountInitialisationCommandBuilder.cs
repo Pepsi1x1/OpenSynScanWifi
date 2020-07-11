@@ -5,25 +5,96 @@ namespace OpenSynScanWifi.Commands
 {
 	public sealed class MountControlCommandBuilder : MountCommandBuilder, IMountControlCommandBuilder
 	{
-		//public byte[] BuildSlewToCommand(MountAxis axis)
-		//{
-		//	string command = base.Build(axis, ClientCommandSet.COMMAND_GET_MOTOR_BOARD_VERSION);
+		public byte[] BuildSetStepPeriodCommand(MountAxis axis, string parameters)
+		{
+			string command = base.Build(axis, ClientCommandSet.COMMAND_SET_STEP_PERIOD, parameters);
 
-		//	byte[] rawCommand = Encoding.ASCII.GetBytes(command);
+			byte[] rawCommand = Encoding.ASCII.GetBytes(command);
 
-		//	return rawCommand;
-		//}
+			return rawCommand;
+		}
+
+		public byte[] BuildSetAxisStopCommand(MountAxis axis)
+		{
+			string command = base.Build(axis, ClientCommandSet.COMMAND_SET_AXIS_STOP);
+
+			byte[] rawCommand = Encoding.ASCII.GetBytes(command);
+
+			return rawCommand;
+		}
+
+		public byte[] BuildSetAxisInstantStopCommand(MountAxis axis)
+		{
+			string command = base.Build(axis, ClientCommandSet.COMMAND_SET_AXIS_INSTANT_STOP);
+
+			byte[] rawCommand = Encoding.ASCII.GetBytes(command);
+
+			return rawCommand;
+		}
+
+		public byte[] BuildSetMotionModeCommand(MountAxis axis, string parameters)
+		{
+			string command = base.Build(axis, ClientCommandSet.COMMAND_SET_MOTION_MODE, parameters);
+
+			byte[] rawCommand = Encoding.ASCII.GetBytes(command);
+
+			return rawCommand;
+		}
+
+		public byte[] BuildSetStartMotionCommand(MountAxis axis)
+		{
+			string command = base.Build(axis, ClientCommandSet.COMMAND_SET_START_MOTION);
+
+			byte[] rawCommand = Encoding.ASCII.GetBytes(command);
+
+			return rawCommand;
+		}
+
+		public byte[] BuildSetGotoTargetIncrementCommand(MountAxis axis, string parameters)
+		{
+			string command = base.Build(axis, ClientCommandSet.COMMAND_SET_GOTO_TARGET_INCREMENT, parameters);
+
+			byte[] rawCommand = Encoding.ASCII.GetBytes(command);
+
+			return rawCommand;
+		}
+
+		public byte[] BuildSetBreakPointIncrementCommand(MountAxis axis, string parameters)
+		{
+			string command = base.Build(axis, ClientCommandSet.COMMAND_SET_BREAK_POINT_INCREMENT, parameters);
+
+			byte[] rawCommand = Encoding.ASCII.GetBytes(command);
+
+			return rawCommand;
+		}
+
+		public byte[] BuildSetBreakStepsCommand(MountAxis axis, string parameters)
+		{
+			string command = base.Build(axis, ClientCommandSet.COMMAND_SET_BREAK_STEPS, parameters);
+
+			byte[] rawCommand = Encoding.ASCII.GetBytes(command);
+
+			return rawCommand;
+		}
 	}
 
 	public interface IMountControlCommandBuilder
 	{
+		byte[] BuildSetAxisInstantStopCommand(MountAxis axis);
+		byte[] BuildSetAxisStopCommand(MountAxis axis);
+		byte[] BuildSetBreakPointIncrementCommand(MountAxis axis, string parameters);
+		byte[] BuildSetBreakStepsCommand(MountAxis axis, string parameters);
+		byte[] BuildSetGotoTargetIncrementCommand(MountAxis axis, string parameters);
+		byte[] BuildSetMotionModeCommand(MountAxis axis, string parameters);
+		byte[] BuildSetStartMotionCommand(MountAxis axis);
+		byte[] BuildSetStepPeriodCommand(MountAxis axis, string parameters);
 	}
 
 	public sealed class MountInitialisationCommandBuilder : MountCommandBuilder, IMountInitialisationCommandBuilder
 	{
-		public byte[] BuildResetRxBufferCommand(MountAxis axis)
+		public byte[] BuildResetRxBufferCommand()
 		{
-			string command = base.Build(axis, "");
+			string command = $"{ClientCommandSet.COMMAND_START}{ClientCommandSet.COMMAND_TERMINATOR}";
 
 			byte[] rawCommand = Encoding.ASCII.GetBytes(command);
 
@@ -69,7 +140,7 @@ namespace OpenSynScanWifi.Commands
 
 			return rawCommand;
 		}
-		
+
 		/// <summary>
 		/// 
 		/// </summary>
