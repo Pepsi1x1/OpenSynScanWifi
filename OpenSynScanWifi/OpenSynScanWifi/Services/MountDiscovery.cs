@@ -27,15 +27,19 @@ namespace OpenSynScanWifi.Services
 
 		[NotNull] private readonly IMountInitialisationCommandParser _commandParser;
 
-		public MountDiscovery([NotNull] UdpClient udpClient,
+		[NotNull] private readonly UdpClient _discoveryClient;
+
+		public MountDiscovery([NotNull] IObjectPool<UdpClient> udpClientPool,
 			[NotNull] IMountInitialisationCommandBuilder commandBuilder,
 			[NotNull] IMountInitialisationCommandParser commandParser,
 			[NotNull] IMountCommonCommandBuilder commonCommandBuilder,
-			[NotNull] IMountCommonCommandParser commonCommandParser) : base(udpClient, commonCommandBuilder, commonCommandParser)
+			[NotNull] IMountCommonCommandParser commonCommandParser) : base(commonCommandBuilder, commonCommandParser, udpClientPool)
 		{
 			this._commandBuilder = commandBuilder;
 
 			this._commandParser = commandParser;
+
+			this._discoveryClient = udpClientPool.Get();
 		}
 
 		public Task DiscoverAsync(CancellationToken cancellationToken)
@@ -46,7 +50,7 @@ namespace OpenSynScanWifi.Services
 			{
 				while (!cancellationToken.IsCancellationRequested)
 				{
-					UdpReceiveResult receiveResult = await this._udpClient.ReceiveAsync().ConfigureAwait(false);
+					UdpReceiveResult receiveResult = await this._discoveryClient.ReceiveAsync().ConfigureAwait(false);
 
 					if (cancellationToken.IsCancellationRequested)
 					{
@@ -78,7 +82,7 @@ namespace OpenSynScanWifi.Services
 
 						MountInfo mountInfo = new MountInfo() {WifiMount = wifiMount};
 
-						Task.Run(async () => { await this.Handshake(mountInfo).ConfigureAwait(false); });
+						Task.Run(async () => { await this.HandshakeAsync(mountInfo).ConfigureAwait(false); });
 					}
 
 #if DEBUG
@@ -100,14 +104,14 @@ namespace OpenSynScanWifi.Services
 
 		public async Task FindAsync()
 		{
-			this._udpClient.EnableBroadcast = true;
+			this._discoveryClient.EnableBroadcast = true;
 
-			await this._udpClient.SendAsync(WifiConstants.CMSG_DISCOVERY_DATAGRAM, WifiConstants.CMSG_DISCOVERY_DATAGRAM.Length, new IPEndPoint(IPAddress.Parse("192.168.4.255"), 11880)).ConfigureAwait(false);
+			await this._discoveryClient.SendAsync(WifiConstants.CMSG_DISCOVERY_DATAGRAM, WifiConstants.CMSG_DISCOVERY_DATAGRAM.Length, new IPEndPoint(IPAddress.Parse("192.168.4.255"), 11880)).ConfigureAwait(false);
 
 			Debug.WriteLine("Sent DISCOVERY1");
 		}
 
-		public async Task Handshake(IMountInfo mountInfo)
+		public async Task HandshakeAsync(IMountInfo mountInfo)
 		{
 			mountInfo.MountState = new MountState();
 
@@ -161,7 +165,7 @@ namespace OpenSynScanWifi.Services
 		{
 			byte[] command = this._commonCommandBuilder.BuildGetStatusExCommand(axis, "010000");
 
-			byte[] response = await this.SendRecieveCommand(mountInfo.WifiMount, command).ConfigureAwait(false);
+			byte[] response = await this.SendReceiveCommandAsync(mountInfo.WifiMount, command).ConfigureAwait(false);
 
 			if (!base.ValidateResponse(response))
 			{
@@ -177,7 +181,7 @@ namespace OpenSynScanWifi.Services
 		{
 			byte[] command = this._commonCommandBuilder.BuildGetStatusCommand(axis);
 
-			byte[] response = await this.SendRecieveCommand(mountInfo.WifiMount, command).ConfigureAwait(false);
+			byte[] response = await this.SendReceiveCommandAsync(mountInfo.WifiMount, command).ConfigureAwait(false);
 
 			if (!base.ValidateResponse(response))
 			{
@@ -199,14 +203,14 @@ namespace OpenSynScanWifi.Services
 		{
 			byte[] command = this._commandBuilder.BuildFinaliseInitialisationCommand(axis);
 
-			await this.SendCommand(mountInfo.WifiMount, command).ConfigureAwait(false);
+			await this.SendCommandAsync(mountInfo.WifiMount, command).ConfigureAwait(false);
 		}
 
 		private async Task QueryAxisPosition(IMountInfo mountInfo, MountAxis axis)
 		{
 			byte[] command = this._commonCommandBuilder.BuildGetAxisPositionCommand(axis);
 
-			byte[] response = await this.SendRecieveCommand(mountInfo.WifiMount, command).ConfigureAwait(false);
+			byte[] response = await this.SendReceiveCommandAsync(mountInfo.WifiMount, command).ConfigureAwait(false);
 
 			if (!base.ValidateResponse(response))
 			{
@@ -224,7 +228,7 @@ namespace OpenSynScanWifi.Services
 		{
 			byte[] command = this._commandBuilder.BuildGetHighSpeedRatioCommand(axis);
 
-			byte[] response = await this.SendRecieveCommand(mountInfo.WifiMount, command).ConfigureAwait(false);
+			byte[] response = await this.SendReceiveCommandAsync(mountInfo.WifiMount, command).ConfigureAwait(false);
 
 			if (!base.ValidateResponse(response))
 			{
@@ -240,7 +244,7 @@ namespace OpenSynScanWifi.Services
 		{
 			byte[] command = this._commandBuilder.BuildGetTimerInterruptFreqCommand(axis);
 
-			byte[] response = await this.SendRecieveCommand(mountInfo.WifiMount, command).ConfigureAwait(false);
+			byte[] response = await this.SendReceiveCommandAsync(mountInfo.WifiMount, command).ConfigureAwait(false);
 
 			if (!base.ValidateResponse(response))
 			{
@@ -258,7 +262,7 @@ namespace OpenSynScanWifi.Services
 		{
 			byte[] command = this._commandBuilder.BuildGetCountsPerRevolutionCommand(axis);
 
-			byte[] response = await this.SendRecieveCommand(mountInfo.WifiMount, command).ConfigureAwait(false);
+			byte[] response = await this.SendReceiveCommandAsync(mountInfo.WifiMount, command).ConfigureAwait(false);
 
 			if (!base.ValidateResponse(response))
 			{
@@ -274,7 +278,7 @@ namespace OpenSynScanWifi.Services
 		{
 			byte[] mcVersionCommand = this._commandBuilder.BuildGetMotorBoardVersionCommand(MountAxis.LeftRight);
 
-			byte[] mcVersionResponse = await this.SendRecieveCommand(mountInfo.WifiMount, mcVersionCommand).ConfigureAwait(false);
+			byte[] mcVersionResponse = await this.SendReceiveCommandAsync(mountInfo.WifiMount, mcVersionCommand).ConfigureAwait(false);
 
 			if (!base.ValidateResponse(mcVersionResponse))
 			{
@@ -291,7 +295,7 @@ namespace OpenSynScanWifi.Services
 		{
 			byte[] rxBuffer = this._commandBuilder.BuildResetRxBufferCommand();
 
-			return this.SendCommand(mountInfo.WifiMount, rxBuffer);
+			return this.SendCommandAsync(mountInfo.WifiMount, rxBuffer);
 		}
 	}
 }

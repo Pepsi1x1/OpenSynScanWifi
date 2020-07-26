@@ -1,8 +1,12 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using OpenSynScanWifi.Commands;
+using OpenSynScanWifi.Helpers;
 using OpenSynScanWifi.Models;
 using OpenSynScanWifi.Services;
 using OpenSynScanWifi.ViewModels;
@@ -49,17 +53,32 @@ namespace OpenSynScanWifi
 			containerRegistry.RegisterForNavigation<ControlPage, ControlPageViewModel>();
 		}
 
+		internal static Queue<int> AvailablePorts = new Queue<int>( Enumerable.Range(50101, 100));
+
 		private static void RegisterServices(IContainerRegistry containerRegistry)
 		{
 			containerRegistry.RegisterSingleton<IAppInfo, AppInfoImplementation>();
 
-			Random rand = new Random(50000);
+			containerRegistry.RegisterInstance<IObjectPool<UdpClient>>(new ObjectPool<UdpClient>(() =>
+			{
+				Random rng = new Random();
+				int nextUpdPort = AvailablePorts.Dequeue();
+				
+				UdpClient client;
+				try
+				{
+					client = new UdpClient(new IPEndPoint(IPAddress.Any, nextUpdPort));
+				}
+				catch (SocketException)
+				{
+					nextUpdPort = AvailablePorts.Dequeue();
+					client = new UdpClient(new IPEndPoint(IPAddress.Any, nextUpdPort));
+				}
 
-			int port = rand.Next(50000, 50100);
+				Debug.WriteLine($"Generated new UDP client at port {nextUpdPort}");
 
-			Debug.WriteLine($"UDP on port {port}");
-
-			containerRegistry.RegisterInstance(typeof(UdpClient), new UdpClient(new IPEndPoint(IPAddress.Any, port)));
+				return client;
+			}, 50));
 
 			containerRegistry.Register<IMountInitialisationCommandBuilder, MountInitialisationCommandBuilder>();
 

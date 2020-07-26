@@ -18,12 +18,12 @@ namespace OpenSynScanWifi.Services
 
 		[NotNull] private readonly IMountControlCommandParser _commandParser;
 
-		public MountControl([NotNull] UdpClient udpClient,
+		public MountControl([NotNull] IObjectPool<UdpClient> udpClientPool,
 			[NotNull] IMountControlCommandBuilder commandBuilder,
 			[NotNull] IMountControlCommandParser commandParser,
 			[NotNull] IMountCommonCommandBuilder commonCommandBuilder,
 			[NotNull] IMountCommonCommandParser commonCommandParser,
-			[NotNull] IMountInfo mountInfo) : base(udpClient, commonCommandBuilder, commonCommandParser)
+			[NotNull] IMountInfo mountInfo) : base(commonCommandBuilder, commonCommandParser, udpClientPool)
 		{
 			this._commandBuilder = commandBuilder;
 
@@ -46,7 +46,7 @@ namespace OpenSynScanWifi.Services
 		{
 			byte[] command = this._commonCommandBuilder.BuildGetStatusCommand(axis);
 
-			byte[] response = await this.SendRecieveCommand(this._mountInfo.WifiMount, command).ConfigureAwait(false);
+			byte[] response = await this.SendReceiveCommandAsync(this._mountInfo.WifiMount, command).ConfigureAwait(false);
 
 			if (!base.ValidateResponse(response))
 			{
@@ -71,7 +71,7 @@ namespace OpenSynScanWifi.Services
 		{
 			byte[] command = this._commandBuilder.BuildSetAxisStopCommand(axis);
 
-			await this.SendCommand(this._mountInfo.WifiMount, command).ConfigureAwait(false);
+			await this.SendCommandAsync(this._mountInfo.WifiMount, command).ConfigureAwait(false);
 
 			this._mountInfo.MountState.AxesStatus[(int) axis].FullStop = true;
 		}
@@ -80,7 +80,7 @@ namespace OpenSynScanWifi.Services
 		{
 			byte[] command = this._commandBuilder.BuildSetAxisInstantStopCommand(axis);
 
-			await this.SendCommand(this._mountInfo.WifiMount, command).ConfigureAwait(false);
+			await this.SendCommandAsync(this._mountInfo.WifiMount, command).ConfigureAwait(false);
 
 			this._mountInfo.MountState.AxesStatus[(int) axis].FullStop = true;
 		}
@@ -91,7 +91,7 @@ namespace OpenSynScanWifi.Services
 
 			byte[] command = this._commandBuilder.BuildSetMotionModeCommand(axis, szCmd);
 
-			return this.SendCommand(this._mountInfo.WifiMount, command);
+			return this.SendCommandAsync(this._mountInfo.WifiMount, command);
 		}
 
 		public Task SetStepPeriod(MountAxis axis, double stepsCount)
@@ -100,14 +100,14 @@ namespace OpenSynScanWifi.Services
 
 			byte[] command = this._commandBuilder.BuildSetStepPeriodCommand(axis, szCmd);
 
-			return this.SendCommand(this._mountInfo.WifiMount, command);
+			return this.SendCommandAsync(this._mountInfo.WifiMount, command);
 		}
 
 		public Task StartMotion(MountAxis axis)
 		{
 			byte[] command = this._commandBuilder.BuildSetStartMotionCommand(axis);
 
-			return this.SendCommand(this._mountInfo.WifiMount, command);
+			return this.SendCommandAsync(this._mountInfo.WifiMount, command);
 		}
 
 		public Task SetGotoTargetIncrement(MountAxis axis, double stepsCount)
@@ -116,7 +116,7 @@ namespace OpenSynScanWifi.Services
 
 			byte[] command = this._commandBuilder.BuildSetGotoTargetIncrementCommand(axis, szCmd);
 
-			return this.SendCommand(this._mountInfo.WifiMount, command);
+			return this.SendCommandAsync(this._mountInfo.WifiMount, command);
 		}
 
 		public Task SetBreakPointIncrement(MountAxis axis, double stepsCount)
@@ -125,7 +125,7 @@ namespace OpenSynScanWifi.Services
 
 			byte[] command = this._commandBuilder.BuildSetBreakPointIncrementCommand(axis, szCmd);
 
-			return this.SendCommand(this._mountInfo.WifiMount, command);
+			return this.SendCommandAsync(this._mountInfo.WifiMount, command);
 		}
 
 		public Task SetBreakSteps(MountAxis axis, double breakSteps)
@@ -134,7 +134,7 @@ namespace OpenSynScanWifi.Services
 
 			byte[] command = this._commandBuilder.BuildSetBreakStepsCommand(axis, szCmd);
 
-			return this.SendCommand(this._mountInfo.WifiMount, command);
+			return this.SendCommandAsync(this._mountInfo.WifiMount, command);
 		}
 	}
 }

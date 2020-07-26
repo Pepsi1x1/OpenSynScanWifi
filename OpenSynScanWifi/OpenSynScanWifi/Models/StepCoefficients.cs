@@ -3,13 +3,13 @@ using OpenSynScanWifi.Constants;
 
 namespace OpenSynScanWifi.Models
 {
-	public struct StepCoefficients
+	public readonly struct StepCoefficients
 	{
-		public double FactorRadToStep;
+		public readonly double FactorRadToStep;
 
-		public double FactorStepToRad;
+		public readonly double FactorStepToRad;
 
-		public double LowSpeedGotoMargin;
+		public readonly double LowSpeedGotoMargin;
 
 		public StepCoefficients(double gearRatio)
 		{
@@ -33,19 +33,18 @@ namespace OpenSynScanWifi.Models
 		public override bool Equals(object obj)
 		{
 			return obj is StepCoefficients other &&
-			       this.FactorRadToStep == other.FactorRadToStep &&
+			       Equals(other);
+		}
+
+		public bool Equals(StepCoefficients other)
+		{
+			return this.FactorRadToStep == other.FactorRadToStep &&
 			       this.FactorStepToRad == other.FactorStepToRad;
 		}
 
 		public override int GetHashCode()
 		{
-			int hashCode = 1322887786;
-
-			hashCode = hashCode * -1521134295 + this.FactorRadToStep.GetHashCode();
-
-			hashCode = hashCode * -1521134295 + this.FactorStepToRad.GetHashCode();
-
-			return hashCode;
+			return HashCode.Combine(this.FactorRadToStep, this.FactorStepToRad);
 		}
 
 		public void Deconstruct(out double factorRadToStep, out double factorStepToRad)

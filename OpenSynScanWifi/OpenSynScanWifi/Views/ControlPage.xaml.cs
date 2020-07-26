@@ -17,58 +17,58 @@ namespace OpenSynScanWifi.Views
 			InitializeComponent();
 		}
 
-		public async void OnStopButtonPressed(object sender, EventArgs e)
+		private void OnStopButtonPressed(object sender, EventArgs e)
 		{
-			await this._mountMotion.Stop(MountAxis.UpDown).ConfigureAwait(false);
-			await this._mountMotion.Stop(MountAxis.LeftRight).ConfigureAwait(false);
+			this._mountMotion.Stop(MountAxis.UpDown).GetAwaiter().GetResult();
+			this._mountMotion.Stop(MountAxis.LeftRight).GetAwaiter().GetResult();
 		}
 
-		private async void OnUpButtonPressed(object sender, EventArgs e)
+		private void OnUpButtonPressed(object sender, EventArgs e)
 		{
 			MessagingCenter.Send(this, "Up", true);
-			await this._mountMotion.SlewAxisAsync(MountAxis.UpDown, 10).ConfigureAwait(false);
+			this._mountMotion.SlewAxisAsync(MountAxis.UpDown, 10).GetAwaiter().GetResult();
 		}
 
-		public async void OnUpButtonReleased(object sender, EventArgs e)
+		private void OnUpButtonReleased(object sender, EventArgs e)
 		{
 			MessagingCenter.Send(this, "Up", false);
-			await this._mountMotion.Stop(MountAxis.UpDown).ConfigureAwait(false);
+			this._mountMotion.Stop(MountAxis.UpDown).GetAwaiter().GetResult();
 		}
 
-		private async void OnDownButtonPressed(object sender, EventArgs e)
+		private void OnDownButtonPressed(object sender, EventArgs e)
 		{
 			MessagingCenter.Send(this, "Down", true);
-			await this._mountMotion.SlewAxisAsync(MountAxis.UpDown, -10).ConfigureAwait(false);
+			this._mountMotion.SlewAxisAsync(MountAxis.UpDown, -10).GetAwaiter().GetResult();
 		}
 
-		public async void OnDownButtonReleased(object sender, EventArgs e)
+		private void OnDownButtonReleased(object sender, EventArgs e)
 		{
 			MessagingCenter.Send(this, "Down", false);
-			await this._mountMotion.Stop(MountAxis.UpDown).ConfigureAwait(false);
+			this._mountMotion.Stop(MountAxis.UpDown).GetAwaiter().GetResult();
 		}
 
-		private async void OnLeftButtonPressed(object sender, EventArgs e)
+		private void OnLeftButtonPressed(object sender, EventArgs e)
 		{
 			MessagingCenter.Send(this, "Left", true);
-			await this._mountMotion.SlewAxisAsync(MountAxis.LeftRight, -10).ConfigureAwait(false);
+			this._mountMotion.SlewAxisAsync(MountAxis.LeftRight, -10).GetAwaiter().GetResult();
 		}
 
-		public async void OnLeftButtonReleased(object sender, EventArgs e)
+		private void OnLeftButtonReleased(object sender, EventArgs e)
 		{
 			MessagingCenter.Send(this, "Left", false);
-			await this._mountMotion.Stop(MountAxis.UpDown).ConfigureAwait(false);
+			this._mountMotion.Stop(MountAxis.LeftRight).GetAwaiter().GetResult();
 		}
 
-		private async void OnRightButtonPressed(object sender, EventArgs e)
+		private void OnRightButtonPressed(object sender, EventArgs e)
 		{
 			MessagingCenter.Send(this, "Right", true);
-			await this._mountMotion.SlewAxisAsync(MountAxis.LeftRight, 10).ConfigureAwait(false);
+			this._mountMotion.SlewAxisAsync(MountAxis.LeftRight, 10).GetAwaiter().GetResult();
 		}
 
-		public async void OnRightButtonReleased(object sender, EventArgs e)
+		private void OnRightButtonReleased(object sender, EventArgs e)
 		{
 			MessagingCenter.Send(this, "Right", false);
-			await this._mountMotion.Stop(MountAxis.UpDown).ConfigureAwait(false);
+			this._mountMotion.Stop(MountAxis.LeftRight).GetAwaiter().GetResult();
 		}
 	}
 }
